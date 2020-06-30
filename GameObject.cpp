@@ -165,10 +165,6 @@ void CRotatingObject::Animate(float fTimeElapsed)
 	
 	CGameObject::SetPosition(Vector3::Add(GetPosition(), Vector3::ScalarProduct(m_xmf3MovingDir, m_fVelocity*fTimeElapsed)));
 	//회전하고 이동방향으로 움직여준다.
-}
 
-void CBulletObject::Animate(float fTimeElapsed)
-{
-	CGameObject::SetPosition(Vector3::Add(GetPosition(), Vector3::ScalarProduct(m_xmf3MovingDir, m_fVelocity * fTimeElapsed)));
-	DecreaseLifeSpan(fTimeElapsed);
+	CGameObject::DecreaseLifeSpan(fTimeElapsed);
 }

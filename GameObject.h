@@ -25,7 +25,7 @@ protected:
 	CMesh* m_pMesh = NULL;
 	CShader* m_pShader = NULL;
 	bool isRendered = true;//현재 객체가 렌더링 대상인가
-	float lifeSpan = 0.0f;
+	float lifeSpan = 3.0f;
 	XMFLOAT3 m_xmf3MovingDir;
 	float m_fVelocity;
 
@@ -50,6 +50,7 @@ public:
 	
 	virtual void SetIsRendered(bool _isRendered) { isRendered = _isRendered; }
 	virtual bool GetIsRendered() { return isRendered; }
+	virtual void SetLifeSapn(float _lifeSpan = 3.0f) { lifeSpan = _lifeSpan; }
 	virtual void DecreaseLifeSpan(float ElapsedTime)//큐브는 사라지고나서 다시 생기는거고 총알은 생겻다가 사라짐.
 	{
 		if (!isRendered)
@@ -87,7 +88,7 @@ class CRotatingObject : public CGameObject
 public:
 	CRotatingObject();
 	virtual ~CRotatingObject();
-private:
+protected:
 	XMFLOAT3 m_xmf3RotationAxis;
 	float m_fRotationSpeed;
 public:
@@ -99,12 +100,11 @@ public:
 	virtual void Animate(float fTimeElapsed);
 };
 
-
-class CBulletObject:public CGameObject
+class CBulletObject :public CRotatingObject
 {
 public:
-	CBulletObject()=default;
-	virtual ~CBulletObject()=default;
+	CBulletObject() = default;
+	~CBulletObject() = default;
 	virtual void DecreaseLifeSpan(float ElapsedTime)//큐브는 사라지고나서 다시 생기는거고 총알은 생겻다가 사라짐.
 	{
 		if (isRendered)
@@ -117,6 +117,13 @@ public:
 			}
 		}
 	}
-	virtual void Animate(float fTimeElapsed);
-	//총알을 이동방향으로 움직여주고 수명을 계산한다.
+	virtual void Animate(float fTimeElapsed)
+	{
+		CGameObject::Rotate(&m_xmf3RotationAxis, m_fRotationSpeed * fTimeElapsed);
+
+		CGameObject::SetPosition(Vector3::Add(GetPosition(), Vector3::ScalarProduct(m_xmf3MovingDir, m_fVelocity * fTimeElapsed)));
+		//회전하고 이동방향으로 움직여준다.
+
+		DecreaseLifeSpan(fTimeElapsed);
+	}
 };

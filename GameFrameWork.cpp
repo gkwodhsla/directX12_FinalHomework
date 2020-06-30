@@ -311,6 +311,12 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 		case VK_F9:
 			ChangeSwapChainState();
 			break;
+
+		case VK_CONTROL:
+			auto pos = m_pPlayer->GetPosition();
+			auto look = m_pPlayer->GetLookVector();
+			m_pScene->GetShaders()[0]->SpawnBullet(pos, look);
+			break;
 		default:
 			break;
 		}
@@ -366,8 +372,6 @@ void CGameFramework::ProcessInput()
 			dwDirection |= DIR_UP;
 		if (pKeyBuffer[VK_NEXT] & 0xF0)
 			dwDirection |= DIR_DOWN;
-		if (pKeyBuffer[VK_CONTROL] & 0xF0)
-			m_pScene->GetShaders()[0]->SpawnBullet(m_pPlayer->GetPosition(), m_pPlayer->GetLook());
 	}
 	float cxDelta = 0.0f, cyDelta = 0.0f;
 	POINT ptCursorPos;

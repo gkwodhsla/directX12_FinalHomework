@@ -86,8 +86,6 @@ public:
 
 protected:
 	CGameObject** m_ppObjects = NULL;
-	CGameObject** m_ppBullets = NULL;
-	//총알
 	CGameObject** m_ppParticles = NULL;
 	//파티클
 	int m_nObjects = 0;
@@ -120,11 +118,8 @@ public:
 protected:
 	//인스턴스 정점 버퍼와 정점 버퍼 뷰이다.
 	ID3D12Resource* m_pd3dcbGameObjects = NULL;
-	ID3D12Resource* m_pd3dcbGameObjectsBullet = NULL;
 	VS_VB_INSTANCE* m_pcbMappedGameObjects = NULL;
-	VS_VB_INSTANCE* m_pcbMappedGameObjectsBullet = NULL;
 	D3D12_VERTEX_BUFFER_VIEW m_d3dInstancingBufferView;
-	D3D12_VERTEX_BUFFER_VIEW m_d3dInstancingBulletBufferView;
 	//인스턴싱에서 메쉬를 하나만 설정하기 때문에 메쉬에 있는 바운딩구 쓸 수 없어서 이렇게 함.
 	BoundingSphere* BoundingSpheres;
 	
