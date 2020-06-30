@@ -126,4 +126,8 @@ public:
 
 		DecreaseLifeSpan(fTimeElapsed);
 	}
+
+private:
+	bool isGuidedBullet;
+	//¿Øµµ≈∫¿Œ∞°?
 };

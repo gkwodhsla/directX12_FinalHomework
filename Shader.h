@@ -86,8 +86,6 @@ public:
 
 protected:
 	CGameObject** m_ppObjects = NULL;
-	CGameObject** m_ppParticles = NULL;
-	//파티클
 	int m_nObjects = 0;
 	int m_nBullets = 20;
 	//최대총알수

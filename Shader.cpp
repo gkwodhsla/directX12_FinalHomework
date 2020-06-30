@@ -315,12 +315,6 @@ void CObjectsShader::ReleaseObjects()
 		}
 		delete[] m_ppObjects;
 	}
-	if (m_ppParticles)
-	{
-		for (int j = 0; j < m_nParticles; ++j)
-			if (m_ppParticles[j])delete m_ppParticles[j];
-		delete[] m_ppParticles;
-	}
 }
 
 void CObjectsShader::AnimateObjects(float fTimeElapsed)
@@ -433,7 +427,7 @@ void CInstancingShader::CreateShaderVariables(ID3D12Device* pd3dDevice,
 {
 	//인스턴스 정보를 저장할 정점 버퍼를 업로드 힙 유형으로 생성한다.
 	m_pd3dcbGameObjects = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL,
-		sizeof(VS_VB_INSTANCE) * (m_nObjects + m_nBullets), D3D12_HEAP_TYPE_UPLOAD,
+		sizeof(VS_VB_INSTANCE) * (m_nObjects + m_nBullets + m_nParticles), D3D12_HEAP_TYPE_UPLOAD,
 		D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 	//정점 버퍼(업로드 힙)에 대한 포인터를 저장한다.
 	m_pd3dcbGameObjects->Map(0, NULL, (void**)&m_pcbMappedGameObjects);
@@ -441,7 +435,7 @@ void CInstancingShader::CreateShaderVariables(ID3D12Device* pd3dDevice,
 	m_d3dInstancingBufferView.BufferLocation =
 		m_pd3dcbGameObjects->GetGPUVirtualAddress();
 	m_d3dInstancingBufferView.StrideInBytes = sizeof(VS_VB_INSTANCE);
-	m_d3dInstancingBufferView.SizeInBytes = sizeof(VS_VB_INSTANCE) * (m_nObjects + m_nBullets);
+	m_d3dInstancingBufferView.SizeInBytes = sizeof(VS_VB_INSTANCE) * (m_nObjects + m_nBullets + m_nParticles);
 
 }
 void CInstancingShader::ReleaseShaderVariables()
@@ -455,8 +449,9 @@ void CInstancingShader::UpdateShaderVariables(ID3D12GraphicsCommandList
 	* pd3dCommandList)
 {
 	auto firstColor = Colors::Blue;
-	auto secondColor = Colors::Orange;
+	auto secondColor = Colors::Green;
 	auto thirdColor = Colors::Red;
+	auto fourthColor = Colors::Gold;
 	for (int j = 0; j < m_nObjects; j++)
 	{
 		m_pcbMappedGameObjects[j].m_xmColor = (j % 2) ? XMFLOAT4(XMVectorGetX(firstColor),XMVectorGetY(firstColor),XMVectorGetZ(firstColor),1.0f) :
@@ -474,14 +469,25 @@ void CInstancingShader::UpdateShaderVariables(ID3D12GraphicsCommandList
 		XMStoreFloat4x4(&m_pcbMappedGameObjects[j].m_xmf4x4Transform,
 			XMMatrixTranspose(scailingWorld));
 	}
+
+	for (int j = m_nObjects + m_nBullets;j<m_nObjects+m_nBullets+m_nParticles ;++j)
+	{
+		m_pcbMappedGameObjects[j].m_xmColor = XMFLOAT4(XMVectorGetX(fourthColor), XMVectorGetY(fourthColor), XMVectorGetZ(fourthColor), 1.0f);
+		m_pcbMappedGameObjects[j].isVisible = XMFLOAT4(m_ppObjects[j]->GetIsRendered(), 0.0f, 0.0f, 0.0f);
+		auto scailingWorld = XMMatrixMultiply(XMLoadFloat4x4(&m_ppObjects[j]->m_xmf4x4World), XMMatrixScaling(0.2f, 0.2f, 0.2f));
+		XMStoreFloat4x4(&m_pcbMappedGameObjects[j].m_xmf4x4Transform,
+			XMMatrixTranspose(scailingWorld));
+	}
+	
 }
 
 void CInstancingShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 	* pd3dCommandList) 
 {
-	m_nObjects = 3;
-	m_nBullets = 20;
-	m_ppObjects = new CGameObject * [m_nObjects+m_nBullets];
+	m_nObjects = 25;
+	m_nBullets = 15;
+	m_nParticles = 250;
+	m_ppObjects = new CGameObject * [m_nObjects+m_nBullets+m_nParticles];
 
 	std::random_device rd;
 	std::default_random_engine dre(rd());
@@ -515,13 +521,26 @@ void CInstancingShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 		pRotatingObject->SetIsRendered(false);
 		m_ppObjects[k++] = pRotatingObject;
 	}
+
+	for (int i = 0; i < m_nParticles;++i)
+	{
+		pRotatingObject = new CBulletObject();
+		pRotatingObject->SetPosition(0.0f, 0.0f, 0.0f);
+		pRotatingObject->SetRotationAxis(Vector3::Normalize(XMFLOAT3(initRotationAxis(dre), initRotationAxis(dre), initRotationAxis(dre))));
+		pRotatingObject->SetRotationSpeed(1500.0f);
+		pRotatingObject->SetMovingDirection(Vector3::Normalize(XMFLOAT3(initMovingDir(dre), initMovingDir(dre), initMovingDir(dre))));
+		pRotatingObject->SetVelocity(500.0f);
+		pRotatingObject->SetIsRendered(false);
+		m_ppObjects[k++] = pRotatingObject;
+	}
+
 	//인스턴싱을 사용하여 렌더링하기 위하여 하나의 게임 객체만 메쉬를 가진다.
 	CCubeMeshDiffused* pCubeMesh = new CCubeMeshDiffused(pd3dDevice, pd3dCommandList,
 		12.0f, 12.0f, 12.0f);
 	m_ppObjects[0]->SetMesh(pCubeMesh);
 
 	BoundingSpheres = new BoundingSphere[m_nObjects+m_nBullets];
-
+	//파티클은 충돌구체를 씌우지 않는다.
 	for (int i = 0; i < m_nObjects+m_nBullets; ++i)
 	{
 		BoundingSpheres[i].Center = m_ppObjects[0]->GetMesh()->GetBoundingSphere().Center;
@@ -612,16 +631,39 @@ void CInstancingShader::AnimateObjects(float fTimeElapsed)
 
 			for (int j = 0; j < m_nObjects; ++j)
 			{
-				if (BoundingSpheres[j].Contains(BoundingSpheres[i])==isIntersect)
+				if (m_ppObjects[j]->GetIsRendered() && BoundingSpheres[j].Contains(BoundingSpheres[i])==isIntersect)
 				{
 					m_ppObjects[i]->SetLifeSapn(0.0f);
 					//총알의 수명을 0초로 만들어 파괴하고
 					m_ppObjects[j]->SetIsRendered(false);
 					//충돌된 큐브를 화면상에서 잠시 지운다.
 
-					//파티클애니메이션진행.
+					for (int k = 0; k < m_nParticles; k += 50)
+					{
+						if (!m_ppObjects[m_nObjects + m_nBullets + k]->GetIsRendered())
+						{
+							for (int l = k; l < k + 50; ++l)
+							{
+								m_ppObjects[m_nObjects + m_nBullets + l]->SetPosition(BoundingSpheres[j].Center.x*5.0f, BoundingSpheres[j].Center.y * 5.0f, BoundingSpheres[j].Center.z * 5.0f);
+								m_ppObjects[m_nObjects + m_nBullets + l]->SetIsRendered(true);
+							}
+							break;
+						}
+					}
 				}
 			}
+		}
+	}
+
+
+
+	//파티클이 생성되었다면 파티클 애니메이션을 진행한다.
+	for (int i = m_nObjects + m_nBullets; i < m_nObjects + m_nBullets + m_nParticles; i+=50)
+	{
+		if (m_ppObjects[i]->GetIsRendered())
+		{
+			for(int j=i;j<i+50;++j)
+				m_ppObjects[j]->Animate(fTimeElapsed);
 		}
 	}
 }
@@ -638,7 +680,7 @@ void CInstancingShader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 	//모든 게임 객체의 인스턴싱 데이터를 버퍼에 저장한다.
 	UpdateShaderVariables(pd3dCommandList);
 	//하나의 정점 데이터를 사용하여 모든 게임 객체(인스턴스)들을 렌더링한다.
-	m_ppObjects[0]->Render(pd3dCommandList, pCamera, m_nObjects+m_nBullets,
+	m_ppObjects[0]->Render(pd3dCommandList, pCamera, m_nObjects+m_nBullets+m_nParticles,
 		m_d3dInstancingBufferView);
 }
 
