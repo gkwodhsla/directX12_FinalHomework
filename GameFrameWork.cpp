@@ -275,13 +275,23 @@ void CGameFramework::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM
 	switch (nMessageID)
 	{
 	case WM_LBUTTONDOWN:
+		::SetCapture(hWnd);
+		::GetCursorPos(&m_ptOldCursorPos);
+		break;
 	case WM_RBUTTONDOWN:
+		POINT ptCursorPos;
+		::GetCursorPos(&ptCursorPos);
+		ScreenToClient(hWnd, &ptCursorPos);
+		auto worldRay = m_pScene->GetShaders()[0]->ScreenRayToWorldRay(ptCursorPos.x, ptCursorPos.y, m_pPlayer->GetCamera());
 		//마우스 캡쳐를 하고 현재 마우스 위치를 가져온다.
+		selectedResult = m_pScene->GetShaders()[0]->CheckRayIntersect(worldRay, m_pPlayer->GetCamera()->GetPosition());
 		::SetCapture(hWnd);
 		::GetCursorPos(&m_ptOldCursorPos);
 		break;
 	case WM_LBUTTONUP:
 	case WM_RBUTTONUP:
+		selectedResult.first = false;
+		selectedResult.second = INT_MAX;
 		//마우스 캡쳐를 해제한다.
 		::ReleaseCapture();
 		break;
@@ -315,7 +325,7 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 		case VK_CONTROL:
 			auto pos = m_pPlayer->GetPosition();
 			auto look = m_pPlayer->GetLookVector();
-			m_pScene->GetShaders()[0]->SpawnBullet(pos, look);
+			m_pScene->GetShaders()[0]->SpawnBullet(pos, look,selectedResult.first, selectedResult.second);
 			break;
 		default:
 			break;

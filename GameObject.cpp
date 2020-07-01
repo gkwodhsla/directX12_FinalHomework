@@ -168,3 +168,19 @@ void CRotatingObject::Animate(float fTimeElapsed)
 
 	CGameObject::DecreaseLifeSpan(fTimeElapsed);
 }
+
+void CBulletObject::Animate(float fTimeElapsed)
+{
+	if (isGuidedBullet)
+	{
+		auto dir = XMVectorSubtract(XMLoadFloat3(&target->GetPosition()),XMVectorSet(m_xmf4x4World._41*0.2f , m_xmf4x4World._42 * 0.2f, m_xmf4x4World._43 * 0.2f, 1.0f));
+		dir = XMVector3Normalize(dir);
+		SetMovingDirection(XMFLOAT3(XMVectorGetX(dir), XMVectorGetY(dir), XMVectorGetZ(dir)));
+	}
+	CGameObject::Rotate(&m_xmf3RotationAxis, m_fRotationSpeed * fTimeElapsed);
+
+	CGameObject::SetPosition(Vector3::Add(GetPosition(), Vector3::ScalarProduct(m_xmf3MovingDir, m_fVelocity * fTimeElapsed)));
+	//회전하고 이동방향으로 움직여준다.
+
+	DecreaseLifeSpan(fTimeElapsed);
+}

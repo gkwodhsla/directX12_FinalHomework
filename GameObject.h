@@ -63,6 +63,8 @@ public:
 			}
 		}
 	}
+	virtual void SetIsGuided(bool) {}
+	virtual void SetTargetCube(CGameObject* cube){}
 
 
 public:
@@ -114,20 +116,17 @@ public:
 			{
 				isRendered = false;
 				lifeSpan = 3.0f;
+				target = NULL;
+				isGuidedBullet = false;
 			}
 		}
 	}
-	virtual void Animate(float fTimeElapsed)
-	{
-		CGameObject::Rotate(&m_xmf3RotationAxis, m_fRotationSpeed * fTimeElapsed);
-
-		CGameObject::SetPosition(Vector3::Add(GetPosition(), Vector3::ScalarProduct(m_xmf3MovingDir, m_fVelocity * fTimeElapsed)));
-		//회전하고 이동방향으로 움직여준다.
-
-		DecreaseLifeSpan(fTimeElapsed);
-	}
-
+	virtual void Animate(float fTimeElapsed);
+	virtual void SetIsGuided(bool _isGuidedBullet) {isGuidedBullet = _isGuidedBullet;}
+	virtual void SetTargetCube(CGameObject* cube) { target = cube; }
 private:
-	bool isGuidedBullet;
+	bool isGuidedBullet=false;
 	//유도탄인가?
+	CGameObject* target = NULL;
+	//유도탄이라면 셋된 인덱스의 큐브를 추적한다.
 };

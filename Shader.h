@@ -45,6 +45,10 @@ public:
 		XMFLOAT4X4* pxmf4x4World);
 	virtual void OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
+
+	virtual XMFLOAT3 ScreenRayToWorldRay(float sX, float sY,CCamera* pCamera);
+	virtual std::pair<bool, int> CheckRayIntersect(XMFLOAT3& worldRay, XMFLOAT3& worldCameraPos) { return std::make_pair(false, INT_MAX); };
+
 protected:
 	ID3D12PipelineState** m_ppd3dPipelineStates = NULL;
 	int m_nPipelineStates = 0;
@@ -82,7 +86,7 @@ public:
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 	CGameObject** GetObjects() { return m_ppObjects; }
 
-	virtual void SpawnBullet(const XMFLOAT3& playerWorldPos, const XMFLOAT3& playerLook);
+	virtual void SpawnBullet(const XMFLOAT3& playerWorldPos, const XMFLOAT3& playerLook, bool isGuidedBullet, int cubeIndex);
 
 protected:
 	CGameObject** m_ppObjects = NULL;
@@ -112,6 +116,8 @@ public:
 	virtual void AnimateObjects(float fTimeElapsed);
 	virtual void ReleaseObjects();
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
+
+	virtual std::pair<bool, int> CheckRayIntersect(XMFLOAT3& worldRay, XMFLOAT3& worldCameraPos);
 
 protected:
 	//인스턴스 정점 버퍼와 정점 버퍼 뷰이다.

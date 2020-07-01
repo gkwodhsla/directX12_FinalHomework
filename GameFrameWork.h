@@ -83,5 +83,7 @@ private:
 	CScene* m_pScene;
 
 	CCamera* m_pCamera = NULL;
+
+	std::pair<bool, int> selectedResult;
 };
 

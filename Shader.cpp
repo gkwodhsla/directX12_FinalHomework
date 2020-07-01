@@ -174,7 +174,24 @@ void CShader::ReleaseShaderVariables()
 {
 }
 
+XMFLOAT3 CShader::ScreenRayToWorldRay(float sX, float sY, CCamera* pCamera)
+{
+	float xP = (2.0f * sX / pCamera->GetViewport().Width) - 1.0f;
+	float yP = (-2.0f * sY / pCamera->GetViewport().Height) + 1.0f;
+	float xC = xP / pCamera->GetProjectionMatrix()._11;
+	float yC = yP / pCamera->GetProjectionMatrix()._22;
 
+	XMVECTOR det;
+
+	auto viewInverse = XMMatrixInverse(&det, XMLoadFloat4x4(&pCamera->GetViewMatrix()));
+
+	XMFLOAT3 cameraRay(xC, yC, 1.0f);
+
+
+	XMStoreFloat3(&cameraRay, (XMVector3TransformCoord(XMLoadFloat3(&cameraRay), viewInverse)));
+
+	return cameraRay;
+}
 
 CPlayerShader::CPlayerShader()
 {
@@ -495,7 +512,7 @@ void CInstancingShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 	std::uniform_real_distribution<>initRotationAxis(0.0f, 1.0f);
 	std::uniform_real_distribution<>initRotationSpeed(30.0f, 150.0f);
 	std::uniform_real_distribution<>initMovingDir(-1.0f, 1.0f);
-	std::uniform_real_distribution<>initVelocity(10.0f, 20.0f);
+	std::uniform_real_distribution<>initVelocity(20.0f, 50.0f);
 
 	int k = 0;
 	CRotatingObject* pRotatingObject = NULL;
@@ -517,7 +534,7 @@ void CInstancingShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 		pRotatingObject->SetRotationAxis(Vector3::Normalize(XMFLOAT3(initRotationAxis(dre), initRotationAxis(dre), initRotationAxis(dre))));
 		pRotatingObject->SetRotationSpeed(1000.0f);
 		pRotatingObject->SetMovingDirection(XMFLOAT3(0.0f,0.0f,0.0f));
-		pRotatingObject->SetVelocity(300.0f);
+		pRotatingObject->SetVelocity(500.0f);
 		pRotatingObject->SetIsRendered(false);
 		m_ppObjects[k++] = pRotatingObject;
 	}
@@ -529,7 +546,7 @@ void CInstancingShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 		pRotatingObject->SetRotationAxis(Vector3::Normalize(XMFLOAT3(initRotationAxis(dre), initRotationAxis(dre), initRotationAxis(dre))));
 		pRotatingObject->SetRotationSpeed(1500.0f);
 		pRotatingObject->SetMovingDirection(Vector3::Normalize(XMFLOAT3(initMovingDir(dre), initMovingDir(dre), initMovingDir(dre))));
-		pRotatingObject->SetVelocity(500.0f);
+		pRotatingObject->SetVelocity(1000.0f);
 		pRotatingObject->SetIsRendered(false);
 		m_ppObjects[k++] = pRotatingObject;
 	}
@@ -595,7 +612,7 @@ void CInstancingShader::AnimateObjects(float fTimeElapsed)
 		{
 			if (j != k)
 			{
-				if (BoundingSpheres[j].Contains(BoundingSpheres[k])==isIntersect)
+				if (m_ppObjects[j]->GetIsRendered() && BoundingSpheres[j].Contains(BoundingSpheres[k])==isIntersect)
 				{
 					auto curDir = m_ppObjects[j]->GetMovingDirection();
 					curDir = Vector3::ScalarProduct(curDir, -1.0f, true);
@@ -684,13 +701,16 @@ void CInstancingShader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 		m_d3dInstancingBufferView);
 }
 
-void CObjectsShader::SpawnBullet(const XMFLOAT3& playerWorldPos, const XMFLOAT3& playerLook)
+void CObjectsShader::SpawnBullet(const XMFLOAT3& playerWorldPos, const XMFLOAT3& playerLook, bool isGuidedBullet, int cubeIndex)
 {
 	for (int i = m_nObjects; i < m_nObjects+m_nBullets; ++i)
 	{
 		if (!m_ppObjects[i]->GetIsRendered())
 		{
 			m_ppObjects[i]->SetIsRendered(true);
+			m_ppObjects[i]->SetIsGuided(isGuidedBullet);
+			if(cubeIndex!=INT_MAX)
+				m_ppObjects[i]->SetTargetCube(m_ppObjects[cubeIndex]);
 			float x = playerWorldPos.x;
 			float y = playerWorldPos.y;
 			float z = playerWorldPos.z;
@@ -701,4 +721,19 @@ void CObjectsShader::SpawnBullet(const XMFLOAT3& playerWorldPos, const XMFLOAT3&
 			break;
 		}
 	}
+}
+
+std::pair<bool, int> CInstancingShader::CheckRayIntersect(XMFLOAT3& worldRay, XMFLOAT3& worldCameraPos)
+{
+	float distance;
+
+	auto result = XMVector3Normalize(XMVectorSubtract(XMLoadFloat3(&worldRay),
+		XMLoadFloat3(&worldCameraPos)));
+
+	for (int i = 0; i < m_nObjects; ++i)
+	{
+		if (m_ppObjects[i]->GetIsRendered() && BoundingSpheres[i].Intersects(XMLoadFloat3(&worldCameraPos), result, distance))
+			return std::make_pair(true, i);
+	}
+	return std::make_pair(false, INT_MAX);
 }
